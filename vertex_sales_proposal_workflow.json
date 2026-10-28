@@ -1,0 +1,756 @@
+{
+  "name": "Vertex Sales Proposal Multi-Agent System",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        48
+      ],
+      "id": "fe6b6116-eafc-459d-9df8-e87945e13cc6",
+      "name": "When chat message received",
+      "webhookId": "d3a5b7c5-813c-454f-ac4f-64feb092226b"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are the Supervisor Agent for Vertex Consulting's Sales Proposal Preparation System.\n\nYour job is to coordinate the process of turning a client inquiry into a sales proposal for salesperson review.\n\nYou do not make unsupported assumptions and you do not invent Vertex Consulting services, prices, features, or requirements.\n\nYou should coordinate the following stages:\n\n1. Understand and extract the client's requirements.\n2. Identify which Vertex Consulting service or services may fit the client's problem.\n3. Check the client's budget and preferred timeline against the approved service information.\n4. Identify missing information, conflicts, or business rule issues.\n5. Prepare the information needed to create a sales proposal.\n6. Ensure the proposal is reviewed before it is considered final.\n\nThe final proposal must be reviewed and approved by a salesperson before it can be sent to the client.\n\nThe goal is to help the salesperson prepare an accurate, relevant and business-friendly proposal."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        224,
+        48
+      ],
+      "id": "345c2ec9-788d-42c1-b880-88a5353c9f78",
+      "name": "Supervisor Agent"
+    },
+    {
+      "parameters": {
+        "options": {
+          "maxTokens": 8000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        240,
+        288
+      ],
+      "id": "79393b4e-814e-4562-96c6-56b566bed848",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "3chDpwMpHoqFgzFB",
+          "name": "OpenRouter account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $workflow.id }}-supervisor",
+        "contextWindowLength": 20
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        368,
+        288
+      ],
+      "id": "3c12f3ae-901d-49bd-86f8-1dbd675053ad",
+      "name": "Supervisor Memory"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyse the following original client inquiry and extract the information needed for a sales proposal.\n\nOriginal Client Inquiry:\n{{ $('When chat message received').item.json.chatInput }}\n\nDo not invent any information.\n\nClearly identify information that is missing or unclear.",
+        "options": {
+          "systemMessage": "You are the Requirement Analyst for Vertex Consulting.\n\nYour responsibility is to carefully analyse the original client inquiry and extract the information needed for preparing a sales proposal.\n\nExtract, when available:\n\n- Client name\n- Industry\n- Company size\n- Client's business problem\n- What the client wants to improve\n- Budget\n- Preferred timeline\n- Contact person\n- Email\n- Important requirements\n- Missing or unclear information\n\nDo not invent information.\n\nIf information is missing, mark it as missing or unclear.\n\nDo not recommend a Vertex Consulting service yet. Your responsibility is only to understand and structure the client's requirements.\n\nReturn clear and structured information that another agent can use."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        576,
+        48
+      ],
+      "id": "5888afd8-3f61-42d4-bbea-0d0d419f51e5",
+      "name": "Requirement Analyst"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Use the requirement analysis below to identify which Vertex Consulting service or services match the client's situation.\n\nRequirement Analysis:\n{{ $('Requirement Analyst').item.json.output }}\n\nUse ONLY the following approved Vertex Consulting Service Catalogue:\n\nS001 - AI Workflow Assessment\nReviews an existing process, identifies AI and automation opportunities, and provides a recommendation report.\nDelivery: 2 weeks\nPrice: NPR 75,000\n\nS002 - AI Knowledge Assistant\nAnswers questions using approved company documents and internal knowledge.\nSuitable for HR, education, support and administration.\nDelivery: 4–6 weeks\nPrice: NPR 150,000\n\nS003 - Business Process Automation\nAutomates repetitive business processes using workflow automation and AI.\nDelivery: 4–8 weeks\nPrice: NPR 200,000\n\nS004 - AI Customer Support Assistant\nAnswers common customer questions using approved FAQs, policies and service information.\nSuitable for retail, travel, education and service businesses.\nDelivery: 4–6 weeks\nPrice: NPR 175,000\n\nS005 - AI Reporting Automation\nCollects business information and automatically prepares structured reports and summaries.\nDelivery: 3–5 weeks\nPrice: NPR 160,000\n\nS006 - Customer Feedback Intelligence\nAnalyses customer feedback, sentiment, trends and recurring complaints.\nDelivery: 4–6 weeks\nPrice: NPR 180,000\n\nS007 - Task & Deadline Automation\nMonitors tasks, identifies upcoming or overdue work and prepares reminders or escalation alerts.\nDelivery: 3–5 weeks\nPrice: NPR 150,000\n\nS008 - AI Readiness Training\nProvides employee training on AI tools, prompting and responsible AI use.\nDelivery: 1–4 weeks\nPrice: NPR 60,000\n\nDo not invent another service.\n\nExplain why the selected service matches the client's problem.\n\nIf there is no clear match, say so and flag it for salesperson review.\n\nDo not make discount or pricing decisions.",
+        "options": {
+          "systemMessage": "You are the Service Matcher for Vertex Consulting.\n\nYour responsibility is to identify which Vertex Consulting service or services best match the client's business problem.\n\nUse only services that Vertex Consulting actually provides.\n\nDo not invent services.\n\nBase your recommendation on:\n- The client's business problem\n- Industry\n- Requirements\n- The approved Vertex Consulting Service Catalogue\n\nExplain why the selected service matches the client's situation.\n\nIf no service clearly matches, say that no clear match was found and flag the situation for salesperson review.\n\nDo not make pricing or discount decisions."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        928,
+        48
+      ],
+      "id": "3ae6f59f-998b-478d-8e67-e70781b70fa0",
+      "name": "Service Matcher"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Check the proposed service against the client's requirements.\n\nRequirement Analysis:\n{{ $('Requirement Analyst').item.json.output }}\n\nService Recommendation:\n{{ $('Service Matcher').item.json.output }}\n\nCheck:\n\n1. Client budget versus approved service price.\n2. Client preferred timeline versus approved service delivery time.\n3. Whether the recommendation follows Vertex Consulting business rules.\n4. Whether customization or another conflict requires salesperson review.\n\nBusiness Rules:\n\n- Use only approved prices.\n- AI cannot offer or approve discounts.\n- Significant customization must be marked for salesperson review.\n- Recommendations should normally remain within the client's stated budget.\n- Proposed delivery time must be consistent with the approved service information.\n- Do not promise services or features Vertex Consulting does not offer.\n- AI must not create legal or contractual commitments.\n- Standard payment terms are 50% at project start and 50% after agreed project completion.\n- A salesperson must review and approve the final proposal before it is sent.\n\nClearly flag:\n- Budget problems\n- Timeline problems\n- Missing information\n- Business rule conflicts\n- Items requiring salesperson review",
+        "options": {
+          "systemMessage": "You are the Budget and Timeline Checker for Vertex Consulting.\n\nYour responsibility is to check whether the recommended service is commercially and operationally consistent with the client information.\n\nCheck:\n\n1. Approved service price against the client's stated budget.\n2. Standard service delivery time against the client's preferred timeline.\n3. Whether the recommendation follows Vertex Consulting business rules.\n4. Whether any customization or conflict needs salesperson review.\n\nUse only approved pricing.\n\nDo not offer discounts.\n\nDo not invent prices.\n\nDo not promise a delivery time that is inconsistent with the approved service information.\n\nIf the budget is insufficient, clearly flag it.\n\nIf the timeline conflicts with the service delivery time, clearly flag it.\n\nDo not create legal or contractual commitments.\n\nReturn the checks clearly so the Proposal Writer can use them."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1280,
+        48
+      ],
+      "id": "705dd850-923b-4117-806a-08310b4b64a5",
+      "name": "Budget & Timeline Checker"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Create a draft sales proposal using the information below.\nApproved Vertex Consulting Service Catalogue (use these exact figures, do not alter, convert currency, or round):\n\nS001 - AI Workflow Assessment | Price: NPR 75,000 | Delivery: 2 weeks\nS002 - AI Knowledge Assistant | Price: NPR 150,000 | Delivery: 4-6 weeks\nS003 - Business Process Automation | Price: NPR 200,000 | Delivery: 4-8 weeks\nS004 - AI Customer Support Assistant | Price: NPR 175,000 | Delivery: 4-6 weeks\nS005 - AI Reporting Automation | Price: NPR 160,000 | Delivery: 3-5 weeks\nS006 - Customer Feedback Intelligence | Price: NPR 180,000 | Delivery: 4-6 weeks\nS007 - Task & Deadline Automation | Price: NPR 150,000 | Delivery: 3-5 weeks\nS008 - AI Readiness Training | Price: NPR 60,000 | Delivery: 1-4 weeks\n\nBefore writing Section 7 (Estimated Timeline) and Section 8 (Estimated Cost), find the recommended service in the table above and copy its price and delivery time EXACTLY as written, in NPR. Never use USD or any other currency. Never estimate, round, or convert numbers.\n\nRequirement Analysis:\n{{ $('Requirement Analyst').item.json.output }}\n\nService Recommendation:\n{{ $('Service Matcher').item.json.output }}\n\nBudget and Timeline Check:\n{{ $('Budget & Timeline Checker').item.json.output }}\n\nThe proposal must contain these sections:\n\n1. Client Requirement\n2. Understanding of the Problem\n3. Recommended Solution\n4. How the Solution Will Work\n5. Scope and Deliverables\n6. Expected Benefits\n7. Estimated Timeline\n8. Estimated Cost\n9. Assumptions and Limitations\n10. Next Step\n\nThe proposal is a DRAFT for salesperson review.\n\nDo not invent:\n- Client requirements\n- Vertex Consulting services\n- Prices\n- Features\n- Guarantees\n- Results\n\nIf there is a budget conflict, timeline conflict, missing information or another important issue, clearly show it in Assumptions and Limitations and mark it for salesperson review.\n\nDo not create legal or contractual commitments.",
+        "options": {
+          "systemMessage": "CRITICAL: All prices must be stated in NPR exactly as given in the approved catalogue. Never use USD or any other currency. Never invent or estimate a price or delivery time — copy them exactly from the catalogue table provided in the prompt.                                                     You are the Proposal Writer for Vertex Consulting.\n\nYour responsibility is to create a professional, natural and business-friendly sales proposal using only verified information provided by the previous agents.\n\nThe proposal must contain:\n\n1. Client Requirement\n2. Understanding of the Problem\n3. Recommended Solution\n4. How the Solution Will Work\n5. Scope and Deliverables\n6. Expected Benefits\n7. Estimated Timeline\n8. Estimated Cost\n9. Assumptions and Limitations\n10. Next Step\n\nDo not invent:\n- Client requirements\n- Vertex Consulting services\n- Prices\n- Features\n- Guarantees\n- Results\n\nDo not make legal or contractual commitments.\n\nDo not promise specific savings or financial results unless evidence is available.\n\nClearly identify missing information, assumptions and issues that require salesperson review.\n\nUse clear language that a business client can understand.\n\nThe proposal is a draft for salesperson review, not a final client-approved document."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1632,
+        48
+      ],
+      "id": "46f97ac4-c51e-4c8f-977e-2220663f27ec",
+      "name": "Proposal Writer"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Review the following sales proposal.\n\nRequirement Analysis:\n{{ $('Requirement Analyst').item.json.output }}\n\nService Recommendation:\n{{ $('Service Matcher').item.json.output }}\n\nBudget and Timeline Check:\n{{ $('Budget & Timeline Checker').item.json.output }}\n\nDraft Proposal:\n{{ $json.output }}\n\nCheck whether:\n\n1. The recommended service exists in the approved Service Catalogue.\n2. The price is correct.\n3. The timeline is consistent with the approved service information.\n4. The recommendation matches the client's problem.\n5. No services, prices, requirements or features were invented.\n6. No unsupported guarantees were included.\n7. Assumptions and limitations are clearly identified.\n8. All required proposal sections are present.\n9. Business rule conflicts are clearly flagged.\n10. Issues requiring salesperson judgment are clearly identified.\n\nDo not silently ignore major conflicts.\n\nThe AI reviewer must not approve the proposal on behalf of the salesperson.\n\nReturn:\n- Review Status\n- Issues Found\n- Required Salesperson Review Points\n- Suggested Corrections",
+        "options": {
+          "systemMessage": "You are the Proposal Reviewer for Vertex Consulting.\n\nReview the complete proposal before it is presented to the salesperson.\n\nCheck:\n\n1. The recommended service exists in the approved Vertex Consulting Service Catalogue.\n2. The price matches the approved pricing.\n3. The proposed timeline is consistent with the service information.\n4. The recommendation is relevant to the client's problem.\n5. The proposal does not contain invented services, prices, requirements or features.\n6. Unsupported guarantees are not included.\n7. Important assumptions and limitations are clearly identified.\n8. All required proposal sections are present.\n9. Business rule conflicts are clearly flagged.\n10. Any information requiring salesperson judgment is clearly identified.\n\nDo not silently correct major business conflicts.\n\nReturn:\n- Review status\n- Issues found\n- Required salesperson review points\n- Suggested corrections where appropriate\n\nThe salesperson must make the final decision."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1984,
+        48
+      ],
+      "id": "eb416b24-dda9-4a99-ae0e-a887e92ed39d",
+      "name": "Proposal Reviewer"
+    },
+    {
+      "parameters": {
+        "options": {
+          "maxTokens": 4000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        656,
+        288
+      ],
+      "id": "e3f8125f-cd20-4a3f-ada0-2ff581e25377",
+      "name": "OpenRouter Chat Model1",
+      "credentials": {
+        "openRouterApi": {
+          "id": "3chDpwMpHoqFgzFB",
+          "name": "OpenRouter account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "maxTokens": 4000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1008,
+        288
+      ],
+      "id": "d43d1a88-5e73-4dfc-a6fc-1b3b01625083",
+      "name": "OpenRouter Chat Model2",
+      "credentials": {
+        "openRouterApi": {
+          "id": "3chDpwMpHoqFgzFB",
+          "name": "OpenRouter account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "maxTokens": 4000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        288
+      ],
+      "id": "3bb31dd2-017d-4950-af9a-74ba463b313f",
+      "name": "OpenRouter Chat Model3",
+      "credentials": {
+        "openRouterApi": {
+          "id": "3chDpwMpHoqFgzFB",
+          "name": "OpenRouter account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "maxTokens": 8000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1712,
+        288
+      ],
+      "id": "904ce5c3-aef9-4c69-93d1-dc3e7fe61957",
+      "name": "OpenRouter Chat Model4",
+      "credentials": {
+        "openRouterApi": {
+          "id": "3chDpwMpHoqFgzFB",
+          "name": "OpenRouter account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "maxTokens": 8000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        2064,
+        288
+      ],
+      "id": "22fd5110-642c-4732-bf73-3a2168df4c76",
+      "name": "OpenRouter Chat Model5",
+      "credentials": {
+        "openRouterApi": {
+          "id": "3chDpwMpHoqFgzFB",
+          "name": "OpenRouter account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ae323723-c76f-49e3-ac37-b6505b34152a",
+              "leftValue": "={{ $json.data.Decision }}",
+              "rightValue": "Approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2560,
+        -48
+      ],
+      "id": "6d69d418-f0a6-4c4a-905a-8c3318fea98e",
+      "name": "Approve on Proposal"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Previous Proposal:\n{{ $('Proposal Writer').item.json.output }}\n\nSalesperson Feedback:\n{{ $json.data.Textarea }}\n\nRevise the previous proposal based on the salesperson's feedback.\n\nUse only the information already available in the workflow.\n\nDo not invent new client requirements, Vertex Consulting services, prices, features, guarantees, or results.\n\nReturn the complete revised proposal, not only the changed sections.",
+        "options": {
+          "systemMessage": "You are the Proposal Revision Agent for Vertex Consulting.\n\nYour responsibility is to revise the sales proposal based on feedback provided by the salesperson during human review.\n\nUse the original client information, previous proposal, previous review information, and the salesperson's feedback.\n\nMake only the changes requested or necessary to address the feedback.\n\nDo not invent:\n- Client requirements\n- Vertex Consulting services\n- Prices\n- Features\n- Guarantees\n- Results\n\nUse only approved Vertex Consulting information.\n\nDo not offer discounts.\n\nDo not create legal or contractual commitments.\n\nIf the salesperson's feedback is unclear or requires information that is not available, clearly flag it for salesperson review instead of inventing an answer.\n\nThe revised proposal must remain a draft for salesperson review.\n\nAfter revising the proposal, clearly provide the complete revised proposal and identify what was changed."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2784,
+        208
+      ],
+      "id": "fb8fecb3-ce5b-4f7b-8acb-9f494cf7d767",
+      "name": "Proposal Revision Agent"
+    },
+    {
+      "parameters": {
+        "options": {
+          "maxTokens": 10000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        2864,
+        432
+      ],
+      "id": "626a6939-3554-44df-85b0-d45181d56160",
+      "name": "OpenRouter Chat Model6",
+      "credentials": {
+        "openRouterApi": {
+          "id": "3chDpwMpHoqFgzFB",
+          "name": "OpenRouter account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "pudasainisalina22@gmail.com",
+        "subject": "Vertex Consulting - Sales Proposal Review Required",
+        "message": "=Hello,\n\nA new sales proposal has been prepared by the Vertex Consulting Multi-Agent Sales Proposal System and requires salesperson review.\n\nCLIENT REQUIREMENT ANALYSIS\n--------------------------------\n{{ $('Requirement Analyst').item.json.output }}\n\nSERVICE RECOMMENDATION\n--------------------------------\n{{ $('Service Matcher').item.json.output }}\n\nBUDGET AND TIMELINE CHECK\n--------------------------------\n{{ $('Budget & Timeline Checker').item.json.output }}\n\nPROPOSAL REVIEW\n--------------------------------\n{{ $('Proposal Reviewer').item.json.output }}\n\nDRAFT SALES PROPOSAL\n--------------------------------\n{{ $('Proposal Writer').item.json.output }}\n\nPlease review the proposal carefully.\n\nPay particular attention to:\n- Recommended service\n- Estimated cost\n- Estimated timeline\n- Scope and deliverables\n- Assumptions and limitations\n- Any budget or timeline conflicts\n- Any issues flagged for salesperson review\n\nThe AI system does not have authority to send the proposal without human approval.\n\nPlease select Approve or Decline and provide comments if changes are required.",
+        "responseType": "customForm",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Decline"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Textarea",
+              "fieldType": "textarea"
+            }
+          ]
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 45,
+              "resumeUnit": "minutes"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2336,
+        -96
+      ],
+      "id": "dba3843e-5056-4ddd-8ddf-95d5d2a040e1",
+      "name": "Human Review",
+      "webhookId": "0f57b963-f89c-4c70-a644-356ffdc04847",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "oP5lYkV8v2uBnwDk",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "driveId": "=myDrive",
+        "folderId": "=1TZVjw5u3duskkQV_Gz7x_xMAGL2UEpIr",
+        "title": "=Final Proposal - {{ $now.format('yyyy-MM-dd') }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2848,
+        -96
+      ],
+      "id": "980d0e33-c88f-4aba-adc9-b3cc066301d4",
+      "name": "Create Final Proposal",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "qMkTI5zxdPqmWokD",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://docs.googleapis.com/v1/documents/{{ $('Create Final Proposal').item.json.id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDocsOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        3136,
+        -96
+      ],
+      "id": "24663776-95ce-459d-b970-6c59e506fb79",
+      "name": "HTTP Request",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "qMkTI5zxdPqmWokD",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const markdown = $('Proposal Revision Agent').isExecuted\n  ? $('Proposal Revision Agent').last().json.output\n  : $('Proposal Writer').item.json.output;\n\nconst docJson = $json.body || {};\nconst docContent = docJson.content || [];\nconst endIndex = docContent.length ? docContent[docContent.length - 1].endIndex : 1;\n\n// ---------- Inline parser (bold / italic / inline code) ----------\nfunction parseInline(raw) {\n  let text = '';\n  const bolds = [];\n  const italics = [];\n  const codes = [];\n  let i = 0;\n  const n = raw.length;\n  while (i < n) {\n    if (raw[i] === '`') {\n      const end = raw.indexOf('`', i + 1);\n      if (end !== -1) {\n        const inner = raw.slice(i + 1, end);\n        const start = text.length;\n        text += inner;\n        codes.push([start, text.length]);\n        i = end + 1;\n        continue;\n      }\n    }\n    if (raw.slice(i, i + 2) === '**' || raw.slice(i, i + 2) === '__') {\n      const marker = raw.slice(i, i + 2);\n      const end = raw.indexOf(marker, i + 2);\n      if (end !== -1) {\n        const inner = raw.slice(i + 2, end);\n        const start = text.length;\n        const p = parseInline(inner);\n        text += p.text;\n        bolds.push([start, text.length]);\n        for (const [s, e] of p.italics) italics.push([s + start, e + start]);\n        for (const [s, e] of p.codes) codes.push([s + start, e + start]);\n        i = end + 2;\n        continue;\n      }\n    }\n    if (raw[i] === '*' || raw[i] === '_') {\n      const marker = raw[i];\n      const end = raw.indexOf(marker, i + 1);\n      if (end !== -1 && end > i + 1) {\n        const inner = raw.slice(i + 1, end);\n        const start = text.length;\n        const p = parseInline(inner);\n        text += p.text;\n        italics.push([start, text.length]);\n        for (const [s, e] of p.bolds) bolds.push([s + start, e + start]);\n        for (const [s, e] of p.codes) codes.push([s + start, e + start]);\n        i = end + 1;\n        continue;\n      }\n    }\n    text += raw[i];\n    i++;\n  }\n  return { text, bolds, italics, codes };\n}\n\n// ---------- Block parser ----------\nconst lines = markdown.replace(/\\r\\n/g, '\\n').split('\\n');\nconst blocks = [];\nlet i = 0;\nwhile (i < lines.length) {\n  const line = lines[i];\n  if (line.trim() === '') { i++; continue; }\n\n  if (/^```/.test(line.trim())) {\n    const codeLines = [];\n    i++;\n    while (i < lines.length && !/^```/.test(lines[i].trim())) { codeLines.push(lines[i]); i++; }\n    i++;\n    blocks.push({ type: 'code', raw: codeLines.join('\\n') });\n    continue;\n  }\n  if (/^(-{3,}|\\*{3,}|_{3,})$/.test(line.trim())) { blocks.push({ type: 'hr' }); i++; continue; }\n\n  const headingMatch = line.match(/^(#{1,4})\\s+(.*)$/);\n  if (headingMatch) {\n    blocks.push({ type: 'heading', level: headingMatch[1].length, raw: headingMatch[2].trim() });\n    i++;\n    continue;\n  }\n  if (/^>\\s?/.test(line)) {\n    const quoteLines = [];\n    while (i < lines.length && /^>\\s?/.test(lines[i])) { quoteLines.push(lines[i].replace(/^>\\s?/, '')); i++; }\n    blocks.push({ type: 'quote', lines: quoteLines });\n    continue;\n  }\n  if (/^[-*]\\s+/.test(line)) {\n    const items = [];\n    while (i < lines.length && /^[-*]\\s+/.test(lines[i])) { items.push(lines[i].replace(/^[-*]\\s+/, '')); i++; }\n    blocks.push({ type: 'ul', items });\n    continue;\n  }\n  if (/^\\d+\\.\\s+/.test(line)) {\n    const items = [];\n    while (i < lines.length && /^\\d+\\.\\s+/.test(lines[i])) { items.push(lines[i].replace(/^\\d+\\.\\s+/, '')); i++; }\n    blocks.push({ type: 'ol', items });\n    continue;\n  }\n  if (/^\\|/.test(line.trim())) {\n    const tableLines = [];\n    while (i < lines.length && lines[i].trim().startsWith('|')) { tableLines.push(lines[i]); i++; }\n    const filtered = tableLines.filter(l => !/^\\|?\\s*:?-+:?\\s*(\\|\\s*:?-+:?\\s*)+\\|?$/.test(l.trim()));\n    blocks.push({ type: 'paragraph', raw: filtered.map(l => l.replace(/^\\||\\|$/g, '').split('|').map(c => c.trim()).join('   ')).join('\\n') });\n    continue;\n  }\n  const paraLines = [];\n  while (\n    i < lines.length && lines[i].trim() !== '' &&\n    !/^```/.test(lines[i].trim()) && !/^(#{1,4})\\s+/.test(lines[i]) &&\n    !/^>\\s?/.test(lines[i]) && !/^[-*]\\s+/.test(lines[i]) &&\n    !/^\\d+\\.\\s+/.test(lines[i]) && !/^\\|/.test(lines[i].trim()) &&\n    !/^(-{3,}|\\*{3,}|_{3,})$/.test(lines[i].trim())\n  ) { paraLines.push(lines[i]); i++; }\n  blocks.push({ type: 'paragraph', raw: paraLines.join(' ') });\n}\n\n// ---------- Assemble plain text + style ranges ----------\nlet text = '';\nconst paragraphStyles = [];\nconst textStyles = [];\nconst bulletRanges = [];\n\nfunction appendParagraph(content, opts = {}) {\n  const parsed = typeof content === 'string' ? parseInline(content) : content;\n  const start = text.length;\n  text += parsed.text;\n  const end = text.length;\n  text += '\\n';\n  if (opts.namedStyleType) paragraphStyles.push({ start, end: end + 1, namedStyleType: opts.namedStyleType });\n  if (opts.indentStart) paragraphStyles.push({ start, end: end + 1, indentStart: opts.indentStart });\n  for (const [s, e] of parsed.bolds) textStyles.push({ start: start + s, end: start + e, bold: true });\n  for (const [s, e] of parsed.italics) textStyles.push({ start: start + s, end: start + e, italic: true });\n  for (const [s, e] of parsed.codes) textStyles.push({ start: start + s, end: start + e, code: true });\n}\n\nfor (const block of blocks) {\n  if (block.type === 'heading') {\n    const styleMap = { 1: 'HEADING_1', 2: 'HEADING_2', 3: 'HEADING_3', 4: 'HEADING_4' };\n    appendParagraph(block.raw, { namedStyleType: styleMap[block.level] || 'HEADING_4' });\n  } else if (block.type === 'paragraph') {\n    appendParagraph(block.raw, { namedStyleType: 'NORMAL_TEXT' });\n  } else if (block.type === 'quote') {\n    for (const qLine of block.lines) {\n      if (qLine.trim() === '') continue;\n      appendParagraph(qLine, { namedStyleType: 'NORMAL_TEXT', indentStart: 36 });\n    }\n  } else if (block.type === 'code') {\n    const start = text.length;\n    text += block.raw;\n    const end = text.length;\n    text += '\\n';\n    paragraphStyles.push({ start, end: end + 1, namedStyleType: 'NORMAL_TEXT' });\n    textStyles.push({ start, end, code: true });\n  } else if (block.type === 'hr') {\n    appendParagraph('─────────────────────────', { namedStyleType: 'NORMAL_TEXT' });\n  } else if (block.type === 'ul') {\n    const start = text.length;\n    for (const item of block.items) appendParagraph(item, { namedStyleType: 'NORMAL_TEXT' });\n    bulletRanges.push({ start, end: text.length, preset: 'BULLET_DISC_CIRCLE_SQUARE' });\n  } else if (block.type === 'ol') {\n    const start = text.length;\n    for (const item of block.items) appendParagraph(item, { namedStyleType: 'NORMAL_TEXT' });\n    bulletRanges.push({ start, end: text.length, preset: 'NUMBERED_DECIMAL_ALPHA_ROMAN' });\n  }\n}\n\n// ---------- Build Google Docs API requests ----------\nconst requests = [];\nconst baseOffset = 1;\n\nif (endIndex > 2) {\n  requests.push({ deleteContentRange: { range: { startIndex: 1, endIndex: endIndex - 1 } } });\n}\nrequests.push({ insertText: { location: { index: baseOffset }, text } });\n\nfor (const p of paragraphStyles) {\n  const style = {};\n  const fields = [];\n  if (p.namedStyleType) { style.namedStyleType = p.namedStyleType; fields.push('namedStyleType'); }\n  if (p.indentStart) { style.indentStart = { magnitude: p.indentStart, unit: 'PT' }; fields.push('indentStart'); }\n  requests.push({\n    updateParagraphStyle: {\n      range: { startIndex: baseOffset + p.start, endIndex: baseOffset + p.end },\n      paragraphStyle: style,\n      fields: fields.join(',')\n    }\n  });\n}\nfor (const b of bulletRanges) {\n  requests.push({\n    createParagraphBullets: {\n      range: { startIndex: baseOffset + b.start, endIndex: baseOffset + b.end },\n      bulletPreset: b.preset\n    }\n  });\n}\nfor (const t of textStyles) {\n  if (t.start >= t.end) continue;\n  const style = {};\n  const fields = [];\n  if (t.bold) { style.bold = true; fields.push('bold'); }\n  if (t.italic) { style.italic = true; fields.push('italic'); }\n  if (t.code) {\n    style.weightedFontFamily = { fontFamily: 'Courier New' };\n    style.backgroundColor = { color: { rgbColor: { red: 0.94, green: 0.94, blue: 0.94 } } };\n    fields.push('weightedFontFamily', 'backgroundColor');\n  }\n  requests.push({\n    updateTextStyle: {\n      range: { startIndex: baseOffset + t.start, endIndex: baseOffset + t.end },\n      textStyle: style,\n      fields: fields.join(',')\n    }\n  });\n}\n\nreturn { json: { requests } };\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3360,
+        -96
+      ],
+      "id": "c51a9815-cbd9-42db-84f1-3209bebb25e7",
+      "name": "Build Proposal Document"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://docs.googleapis.com/v1/documents/{{ $('Create Final Proposal').item.json.id }}:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDocsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        3584,
+        -96
+      ],
+      "id": "6a9a9bbb-49d9-4ba2-bf68-2fd82c25ebc4",
+      "name": "Update Final Proposal",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "qMkTI5zxdPqmWokD",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "pudasainisalina22@gmail.com",
+        "subject": "=Proposal Finalized: {{ $('Create Final Proposal').item.json.name }}",
+        "message": "=Hi, The proposal has been approved and finalized. You can view the final document here: https://docs.google.com/document/d/{{ $('Create Final Proposal').item.json.id }}/edit This is an automated notification from the Vertex Sales Proposal system.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        3808,
+        -96
+      ],
+      "id": "1e72ebf3-9f27-4232-9be9-d0d6b1ba4e60",
+      "name": "Document Creation and Notification",
+      "webhookId": "f9632420-3bb1-49a8-818d-3c70c2c131fd",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "oP5lYkV8v2uBnwDk",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Supervisor Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Supervisor Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supervisor Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Supervisor Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supervisor Agent": {
+      "main": [
+        [
+          {
+            "node": "Requirement Analyst",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Requirement Analyst": {
+      "main": [
+        [
+          {
+            "node": "Service Matcher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Service Matcher": {
+      "main": [
+        [
+          {
+            "node": "Budget & Timeline Checker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Budget & Timeline Checker": {
+      "main": [
+        [
+          {
+            "node": "Proposal Writer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Proposal Writer": {
+      "main": [
+        [
+          {
+            "node": "Proposal Reviewer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Proposal Reviewer": {
+      "main": [
+        [
+          {
+            "node": "Human Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Requirement Analyst",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Service Matcher",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Budget & Timeline Checker",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Proposal Writer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Proposal Reviewer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approve on Proposal": {
+      "main": [
+        [
+          {
+            "node": "Create Final Proposal",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Proposal Revision Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model6": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Proposal Revision Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Proposal Revision Agent": {
+      "main": [
+        [
+          {
+            "node": "Proposal Reviewer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human Review": {
+      "main": [
+        [
+          {
+            "node": "Approve on Proposal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Final Proposal": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Build Proposal Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Proposal Document": {
+      "main": [
+        [
+          {
+            "node": "Update Final Proposal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Final Proposal": {
+      "main": [
+        [
+          {
+            "node": "Document Creation and Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "1955f969-17f8-4689-94bc-f182d1673d6a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9dcddf7fb5d80b9897f592662726838a510df6aaca31ea29276b11e920aef73f"
+  },
+  "nodeGroups": [],
+  "id": "glf0DhNLt0WC7Yp1",
+  "tags": []
+}
