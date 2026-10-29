@@ -61,6 +61,11 @@ The workflow is implemented in n8n and contains multiple connected stages for pr
 
 This project demonstrates how AI agents and workflow automation can support a sales proposal process, from analysing customer needs to generating a proposal and incorporating human feedback.
 
+## Project Report
+
+Read the full project report here:
+[Vertex Sales Proposal System Report](docs/Vertex_Sales_Proposal_System_Report.pdf)
+
 ## Author
 
 **Salina Pudasaini**
